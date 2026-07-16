@@ -1,16 +1,34 @@
 #!/usr/bin/env bash
-#Bash script that installs HAProxy & makes configurations
+# Installs and configures HAProxy on lb-01 to balance traffic
+# between web-01 and web-02 using a roundrobin algorithm
 
-apt-get -y install software-properties-common
-add-apt-repository ppa:vbernat/haproxy-1.8
-apt-get update
+set -e
+
+# Update package list and install HAProxy
+apt-get -y update
 apt-get -y install haproxy
-echo "ENABLED=1" >> /etc/default/haproxy
-printf %s "listen 6052-webs
+
+# Enable HAProxy to start on boot / be managed via init script
+sed -i 's/ENABLED=0/ENABLED=1/' /etc/default/haproxy
+
+# Back up the original config
+if [ ! -f /etc/haproxy/haproxy.cfg.orig ]; then
+    cp /etc/haproxy/haproxy.cfg /etc/haproxy/haproxy.cfg.orig
+fi
+
+# Append the frontend/backend configuration
+cat >> /etc/haproxy/haproxy.cfg << EOF
+
+frontend haproxy_front
     bind *:80
     mode http
+    default_backend web_servers
+
+backend web_servers
     balance roundrobin
-    server 6052-web-02 3.85.134.200:80 check
-    server 6052-web-01 107.20.88.209:80 check
-" >> /etc/haproxy/haproxy.cfg
-sudo service haproxy restart
+    server web-01 	3.88.19.0:80 check
+    server web-02 	3.88.19.1:80 check
+EOF
+
+# Restart HAProxy to apply changes
+service haproxy restart
