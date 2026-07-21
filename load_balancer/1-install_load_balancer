@@ -1,34 +1,30 @@
 #!/usr/bin/env bash
-# Installs and configures HAProxy on lb-01 to balance traffic
-# between web-01 and web-02 using a roundrobin algorithm
+# Installs HAProxy and configures it to load-balance traffic across web-01 and web-02 using round robin
 
 set -e
 
-# Update package list and install HAProxy
-apt-get -y update
-apt-get -y install haproxy
+# shellcheck disable=SC2154
 
-# Enable HAProxy to start on boot / be managed via init script
-sed -i 's/ENABLED=0/ENABLED=1/' /etc/default/haproxy
+apt-get update -y
+apt-get install -y haproxy
 
-# Back up the original config
+sed -i "s/ENABLED=0/ENABLED=1/" /etc/default/haproxy
+
 if [ ! -f /etc/haproxy/haproxy.cfg.orig ]; then
     cp /etc/haproxy/haproxy.cfg /etc/haproxy/haproxy.cfg.orig
 fi
 
-# Append the frontend/backend configuration
-cat >> /etc/haproxy/haproxy.cfg << EOF
+cat >> /etc/haproxy/haproxy.cfg <<EOF
 
-frontend haproxy_front
+frontend http_front
     bind *:80
-    mode http
-    default_backend web_servers
+    stats uri /haproxy?stats
+    default_backend http_back
 
-backend web_servers
+backend http_back
     balance roundrobin
-    server web-01 	3.88.19.0:80 check
-    server web-02 	52.87.160.149:80 check
+    server 7170-web-01 3.88.19.0:80 check
+    server 7170-web-02 52.87.160.149:80 check
 EOF
 
-# Restart HAProxy to apply changes
 service haproxy restart
