@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # shell script to install nginx and add add_header
-sudo apt-get update
-sudo apt-get -y install nginx
+sudo apt update
+sudo apt -y install nginx
 sudo sed -i '/server_name _;/a\ add_header X-Served-By $hostname;' /etc/nginx/sites-available/default
 sudo service nginx restart
 echo "Nginx configured with custom X-Served-By header"
